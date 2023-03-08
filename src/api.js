@@ -1,18 +1,21 @@
-/**
- *
- * @param {*} events:
- * The following function should be in the “api.js” file.
- * This function takes an events array, then uses map to create a new array with only locations.
- * It will also remove all duplicates by creating another new array using the spread operator and spreading a Set.
- * The Set will remove all duplicates from the array.
- */
-
 import { mockData } from './mock-data';
-import axios from 'axios';
 import NProgress from 'nprogress';
+
+// pasted from "serviceWorkerRegistration.js"
+// used in getEvents()
+const isLocalhost = Boolean(
+  window.location.hostname === 'localhost' ||
+    // [::1] is the IPv6 localhost address.
+    window.location.hostname === '[::1]' ||
+    // 127.0.0.0/8 are considered localhost for IPv4.
+    window.location.hostname.match(
+      /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+    )
+);
 
 export const getAccessToken = async () => {
   const accessToken = localStorage.getItem('access_token');
+
   const tokenCheck = accessToken && (await checkToken(accessToken));
 
   if (!accessToken || tokenCheck.error) {
@@ -21,7 +24,7 @@ export const getAccessToken = async () => {
     const code = await searchParams.get('code');
     if (!code) {
       const results = await axios.get(
-        'https://m4w3mcnu50.execute-api.eu-central-1.amazonaws.com/dev/api/get-auth-url'
+        'https://fapaxthxpa.execute-api.us-east-1.amazonaws.com/dev/api/get-auth-url'
       );
       const { authUrl } = results.data;
       return (window.location.href = authUrl);
@@ -30,7 +33,8 @@ export const getAccessToken = async () => {
   }
   return accessToken;
 };
-const checkToken = async (accessToken) => {
+
+export const checkToken = async (accessToken) => {
   const result = await fetch(
     `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${accessToken}`
   )
@@ -39,21 +43,24 @@ const checkToken = async (accessToken) => {
 
   return result;
 };
+
 export const getEvents = async () => {
   NProgress.start();
-
-  if (window.location.href.startsWith('http://localhost')) {
+  if (isLocalhost) {
     NProgress.done();
     return mockData;
   }
 
-  const token = await getAccessToken();
+  if (!navigator.onLine) {
+    const data = localStorage.getItem('lastEvents');
+    NProgress.done();
+    return data ? JSON.parse(data).events : [];
+  }
 
+  const token = await getAccessToken();
   if (token) {
     removeQuery();
-    const url =
-      'https://m4w3mcnu50.execute-api.eu-central-1.amazonaws.com/dev/api/get-events';
-    token;
+    const url = `https://fapaxthxpa.execute-api.us-east-1.amazonaws.com/dev/api/get-events/${token}`;
     const result = await axios.get(url);
     if (result.data) {
       var locations = extractLocations(result.data.events);
@@ -84,12 +91,11 @@ const removeQuery = () => {
     window.history.pushState('', '', newurl);
   }
 };
+
 const getToken = async (code) => {
   const encodeCode = encodeURIComponent(code);
   const { access_token } = await fetch(
-    'https://m4w3mcnu50.execute-api.eu-central-1.amazonaws.com/dev/api/token' +
-      '/' +
-      encodeCode
+    `https://fapaxthxpa.execute-api.us-east-1.amazonaws.com/dev/api/token/${encodeCode}`
   )
     .then((res) => {
       return res.json();
