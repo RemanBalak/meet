@@ -5,8 +5,7 @@ class TopBar extends Component {
   render() {
     return (
       <div className="TopBar">
-        <h1>NOFOMO</h1>
-        <h3 className="subtitle text-white">No Fear Of Missing Out!</h3>
+        <h1>Meet App</h1>
         <ThemeChanger />
       </div>
     );
