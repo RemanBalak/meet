@@ -35,7 +35,7 @@ export const checkToken = async (accessToken) => {
 
 export const getEvents = async () => {
   NProgress.start();
-  if (isLocalhost) {
+  if (window.location.href.startsWith('http://localhost')) {
     NProgress.done();
     return mockData;
   }
