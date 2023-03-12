@@ -1,75 +1,64 @@
 import React, { Component } from 'react';
 import './App.css';
-import EventList from './EventList';
+import './nprogress.css';
+// COMPONENTS //////////
 import CitySearch from './CitySearch';
 import NumberOfEvents from './NumberOfEvents';
-import { InfoAlert } from './Alert';
-import { extractLocations, getEvents, checkToken, getAccessToken } from './api';
-import './nprogress.css';
-import WelcomeScreen from './WelcomeScreen';
+import EventList from './EventList';
+import TopBar from './TopBar';
+// DATA / FUNCS //////////
+import { getEvents, extractLocations } from './api';
 
 class App extends Component {
   state = {
     events: [],
     locations: [],
-    numberOfEvents: 32,
-    showWelcomeScreen: undefined,
+    seletedLocation: 'all',
+    eventCount: 32,
   };
-
-  updateEvents = (location, eventCount) => {
-    getEvents().then((events) => {
-      const locationEvents =
-        location === 'all'
-          ? events
-          : events.filter((event) => event.location === location);
-      this.setState({
-        events: locationEvents.slice(0, this.state.numberOfEvents),
-      });
-    });
-  };
-
-  updateNumberOfEvents(number) {
-    this.setState({
-      numberOfEvents: number,
-    });
-  }
 
   async componentDidMount() {
     this.mounted = true;
-    const isLocal =
-      window.location.href.startsWith('http://127.0.0.1') ||
-      window.location.href.startsWith('http://localhost');
-    if (navigator.onLine && !isLocal) {
-      const accessToken = localStorage.getItem('access_token');
-      const isTokenValid = (await checkToken(accessToken)).error ? false : true;
-      const searchParams = new URLSearchParams(window.location.search);
-      const code = searchParams.get('code');
-      this.setState({ showWelcomeScreen: !(code || isTokenValid) });
-      if ((code || isTokenValid) && this.mounted)
-        getEvents().then((events) => {
-          if (this.mounted) {
-            this.setState({
-              events: events.slice(0, this.state.numberOfEvents),
-              locations: extractLocations(events),
-            });
-          }
-        });
-    } else {
-      getEvents().then((events) => {
-        if (this.mounted) {
-          this.setState({
-            showWelcomeScreen: false,
-            events: events.slice(0, this.state.numberOfEvents),
-            locations: extractLocations(events),
-          });
-        }
-      });
-    }
+    getEvents().then((events) => {
+      if (this.mounted) {
+        events = events.slice(0, this.state.eventCount);
+        this.setState({ events, locations: extractLocations(events) });
+      }
+    });
   }
 
   componentWillUnmount() {
     this.mounted = false;
   }
+
+  updateEvents = (location, inputNumber) => {
+    const { eventCount, seletedLocation } = this.state;
+    if (location) {
+      getEvents().then((events) => {
+        const locationEvents =
+          location === 'all'
+            ? events
+            : events.filter((event) => event.location === location);
+        const eventsToShow = locationEvents.slice(0, eventCount);
+        this.setState({
+          events: eventsToShow,
+          seletedLocation: location,
+        });
+      });
+    } else {
+      getEvents().then((events) => {
+        const locationEvents =
+          seletedLocation === 'all'
+            ? events
+            : events.filter((event) => event.location === seletedLocation);
+        const eventsToShow = locationEvents.slice(0, inputNumber);
+        this.setState({
+          events: eventsToShow,
+          eventCount: inputNumber,
+        });
+      });
+    }
+  };
 
   getData = () => {
     const { locations, events } = this.state;
@@ -84,36 +73,20 @@ class App extends Component {
   };
 
   render() {
-    if (this.state.showWelcomeScreen === undefined)
-      return <div className="App" />;
     return (
       <div className="App">
-        {!navigator.onLine && (
-          <InfoAlert
-            className="alert-centered"
-            text="App is currently offline. You are seeing your cached data."
-          />
-        )}
-        <div className="filters">
+        <TopBar />
+        <div className="filter-box">
           <CitySearch
             locations={this.state.locations}
-            updateEvents={(updatedLocation) => {
-              this.updateEvents(updatedLocation);
-            }}
+            updateEvents={this.updateEvents}
           />
           <NumberOfEvents
-            num={this.state.numberOfEvents}
-            updateNumberOfEvents={(num) => this.updateNumberOfEvents(num)}
+            eventCount={this.state.eventCount}
+            updateEvents={this.updateEvents}
           />
         </div>
-
         <EventList events={this.state.events} />
-        <WelcomeScreen
-          showWelcomeScreen={this.state.showWelcomeScreen}
-          getAccessToken={() => {
-            getAccessToken();
-          }}
-        />
       </div>
     );
   }
