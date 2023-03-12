@@ -1,23 +1,12 @@
-import React, { Component } from "react";
-import "./App.css";
-import EventList from "./EventList";
-import CitySearch from "./CitySearch";
-import NumberOfEvents from "./NumberOfEvents";
-import { InfoAlert } from "./Alert";
-import { extractLocations, getEvents, checkToken, getAccessToken } from "./api";
-import "./nprogress.css";
-import WelcomeScreen from "./WelcomeScreen";
-import EventGenre from "./EventGenre";
-import {
-  CartesianGrid,
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-// import { mockData } from "./mock-data";
+import React, { Component } from 'react';
+import './App.css';
+import EventList from './EventList';
+import CitySearch from './CitySearch';
+import NumberOfEvents from './NumberOfEvents';
+import { InfoAlert } from './Alert';
+import { extractLocations, getEvents, checkToken, getAccessToken } from './api';
+import './nprogress.css';
+import WelcomeScreen from './WelcomeScreen';
 
 class App extends Component {
   state = {
@@ -30,7 +19,7 @@ class App extends Component {
   updateEvents = (location, eventCount) => {
     getEvents().then((events) => {
       const locationEvents =
-        location === "all"
+        location === 'all'
           ? events
           : events.filter((event) => event.location === location);
       this.setState({
@@ -48,13 +37,13 @@ class App extends Component {
   async componentDidMount() {
     this.mounted = true;
     const isLocal =
-      window.location.href.startsWith("http://127.0.0.1") ||
-      window.location.href.startsWith("http://localhost");
+      window.location.href.startsWith('http://127.0.0.1') ||
+      window.location.href.startsWith('http://localhost');
     if (navigator.onLine && !isLocal) {
-      const accessToken = localStorage.getItem("access_token");
+      const accessToken = localStorage.getItem('access_token');
       const isTokenValid = (await checkToken(accessToken)).error ? false : true;
       const searchParams = new URLSearchParams(window.location.search);
-      const code = searchParams.get("code");
+      const code = searchParams.get('code');
       this.setState({ showWelcomeScreen: !(code || isTokenValid) });
       if ((code || isTokenValid) && this.mounted)
         getEvents().then((events) => {
@@ -88,7 +77,7 @@ class App extends Component {
       const number = events.filter(
         (event) => event.location === location
       ).length;
-      const city = location.split(", ").shift();
+      const city = location.split(', ').shift();
       return { city, number };
     });
     return data;
@@ -120,7 +109,28 @@ class App extends Component {
         <div className="data-vis-wrapper">
           <EventGenre events={this.state.events} />
 
-          
+          <ResponsiveContainer height={400}>
+            <ScatterChart
+              margin={{
+                top: 20,
+                right: 20,
+                bottom: 20,
+                left: 20,
+              }}
+            >
+              <CartesianGrid />
+              <XAxis type="category" dataKey="city" name="city" />
+              <YAxis
+                type="number"
+                dataKey="number"
+                name="number of events"
+                allowDecimals={false}
+              />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Scatter data={this.getData()} fill="#8884d8" />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
         <EventList events={this.state.events} />
         <WelcomeScreen
           showWelcomeScreen={this.state.showWelcomeScreen}
