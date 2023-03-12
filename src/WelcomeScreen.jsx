@@ -29,7 +29,7 @@ o.svg"
         </div>
       </div>
       <a
-        href="https://remanbalak.github.io/meet/privacy.html"
+        href="https://remanbalak.github.io/meet/public/privacy.html"
         rel="nofollow noopener"
       >
         Privacy policy
