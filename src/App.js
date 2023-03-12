@@ -7,7 +7,6 @@ import { InfoAlert } from './Alert';
 import { extractLocations, getEvents, checkToken, getAccessToken } from './api';
 import './nprogress.css';
 import WelcomeScreen from './WelcomeScreen';
-import EventGenre from './EventGenre';
 
 class App extends Component {
   state = {
