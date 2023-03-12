@@ -51,10 +51,7 @@ input {
   display: flex;
   flex-direction: column;
 }
-.city {
-  width: 200px;
-  height: 30px;
-}
+
 .noe-input {
   width: 200px;
   height: 30px;

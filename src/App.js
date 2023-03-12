@@ -1,64 +1,86 @@
 import React, { Component } from 'react';
 import './App.css';
-import './nprogress.css';
-// COMPONENTS //////////
+import EventList from './EventList';
 import CitySearch from './CitySearch';
 import NumberOfEvents from './NumberOfEvents';
-import EventList from './EventList';
-import TopBar from './TopBar';
-// DATA / FUNCS //////////
-import { getEvents, extractLocations } from './api';
+import { InfoAlert } from './Alert';
+import { extractLocations, getEvents, checkToken, getAccessToken } from './api';
+import './nprogress.css';
+import WelcomeScreen from './WelcomeScreen';
+import EventGenre from './EventGenre';
+import {
+  CartesianGrid,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+// import { mockData } from "./mock-data";
 
 class App extends Component {
   state = {
     events: [],
     locations: [],
-    seletedLocation: 'all',
-    eventCount: 32,
+    numberOfEvents: 32,
+    showWelcomeScreen: undefined,
   };
+
+  updateEvents = (location, eventCount) => {
+    getEvents().then((events) => {
+      const locationEvents =
+        location === 'all'
+          ? events
+          : events.filter((event) => event.location === location);
+      this.setState({
+        events: locationEvents.slice(0, this.state.numberOfEvents),
+      });
+    });
+  };
+
+  updateNumberOfEvents(number) {
+    this.setState({
+      numberOfEvents: number,
+    });
+  }
 
   async componentDidMount() {
     this.mounted = true;
-    getEvents().then((events) => {
-      if (this.mounted) {
-        events = events.slice(0, this.state.eventCount);
-        this.setState({ events, locations: extractLocations(events) });
-      }
-    });
+    const isLocal =
+      window.location.href.startsWith('http://127.0.0.1') ||
+      window.location.href.startsWith('http://localhost');
+    if (navigator.onLine && !isLocal) {
+      const accessToken = localStorage.getItem('access_token');
+      const isTokenValid = (await checkToken(accessToken)).error ? false : true;
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get('code');
+      this.setState({ showWelcomeScreen: !(code || isTokenValid) });
+      if ((code || isTokenValid) && this.mounted)
+        getEvents().then((events) => {
+          if (this.mounted) {
+            this.setState({
+              events: events.slice(0, this.state.numberOfEvents),
+              locations: extractLocations(events),
+            });
+          }
+        });
+    } else {
+      getEvents().then((events) => {
+        if (this.mounted) {
+          this.setState({
+            showWelcomeScreen: false,
+            events: events.slice(0, this.state.numberOfEvents),
+            locations: extractLocations(events),
+          });
+        }
+      });
+    }
   }
 
   componentWillUnmount() {
     this.mounted = false;
   }
-
-  updateEvents = (location, inputNumber) => {
-    const { eventCount, seletedLocation } = this.state;
-    if (location) {
-      getEvents().then((events) => {
-        const locationEvents =
-          location === 'all'
-            ? events
-            : events.filter((event) => event.location === location);
-        const eventsToShow = locationEvents.slice(0, eventCount);
-        this.setState({
-          events: eventsToShow,
-          seletedLocation: location,
-        });
-      });
-    } else {
-      getEvents().then((events) => {
-        const locationEvents =
-          seletedLocation === 'all'
-            ? events
-            : events.filter((event) => event.location === seletedLocation);
-        const eventsToShow = locationEvents.slice(0, inputNumber);
-        this.setState({
-          events: eventsToShow,
-          eventCount: inputNumber,
-        });
-      });
-    }
-  };
 
   getData = () => {
     const { locations, events } = this.state;
@@ -73,20 +95,60 @@ class App extends Component {
   };
 
   render() {
+    if (this.state.showWelcomeScreen === undefined)
+      return <div className="App" />;
     return (
       <div className="App">
-        <TopBar />
-        <div className="filter-box">
+        {!navigator.onLine && (
+          <InfoAlert
+            className="alert-centered"
+            text="App is currently offline. You are seeing your cached data."
+          />
+        )}
+        <div className="filters">
           <CitySearch
             locations={this.state.locations}
-            updateEvents={this.updateEvents}
+            updateEvents={(updatedLocation) => {
+              this.updateEvents(updatedLocation);
+            }}
           />
           <NumberOfEvents
-            eventCount={this.state.eventCount}
-            updateEvents={this.updateEvents}
+            num={this.state.numberOfEvents}
+            updateNumberOfEvents={(num) => this.updateNumberOfEvents(num)}
           />
         </div>
+        <div className="data-vis-wrapper">
+          <EventGenre events={this.state.events} />
+
+          <ResponsiveContainer height={400}>
+            <ScatterChart
+              margin={{
+                top: 20,
+                right: 20,
+                bottom: 20,
+                left: 20,
+              }}
+            >
+              <CartesianGrid />
+              <XAxis type="category" dataKey="city" name="city" />
+              <YAxis
+                type="number"
+                dataKey="number"
+                name="number of events"
+                allowDecimals={false}
+              />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Scatter data={this.getData()} fill="#8884d8" />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
         <EventList events={this.state.events} />
+        <WelcomeScreen
+          showWelcomeScreen={this.state.showWelcomeScreen}
+          getAccessToken={() => {
+            getAccessToken();
+          }}
+        />
       </div>
     );
   }
